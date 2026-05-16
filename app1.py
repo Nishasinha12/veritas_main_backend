@@ -86,13 +86,13 @@ snowflake_gen = SnowflakeGenerator(1)
 print(f"🔑 GNEWS KEY: {os.getenv('GNEWS_API_KEY')}")  # confirm it loads
 
 
-print("🚀 Loading model and transformers...")
-MODEL_DIR = "./models"
-model = joblib.load(os.path.join(MODEL_DIR, 'frontend_model.pkl'))
-vectorizer = joblib.load(os.path.join(MODEL_DIR, 'frontend_vectorizer.pkl'))
-scaler = joblib.load(os.path.join(MODEL_DIR, 'frontend_scaler.pkl'))
-numeric_features_list = joblib.load(os.path.join(MODEL_DIR, 'frontend_numeric_features_list.pkl'))
-print("✅ Model and transformers loaded successfully.")
+#print("🚀 Loading model and transformers...")
+#MODEL_DIR = "./models"
+#model = joblib.load(os.path.join(MODEL_DIR, 'frontend_model.pkl'))
+#vectorizer = joblib.load(os.path.join(MODEL_DIR, 'frontend_vectorizer.pkl'))
+#scaler = joblib.load(os.path.join(MODEL_DIR, 'frontend_scaler.pkl'))
+#numeric_features_list = joblib.load(os.path.join(MODEL_DIR, 'frontend_numeric_features_list.pkl'))
+#print("✅ Model and transformers loaded successfully.")
 
 # --- LOAD YOUR AUDIO MODEL ---
 #print("🚀 Loading audio deepfake model...")
@@ -111,31 +111,31 @@ print("✅ Model and transformers loaded successfully.")
 # -----------------------------
 # Prediction Helper
 # -----------------------------
-def make_prediction(tweet_text, created_at_str):
+#def make_prediction(tweet_text, created_at_str):
     # This function is unchanged
-    data = {'text': [tweet_text], 'created_at': [pd.to_datetime(created_at_str)]}
-    df = pd.DataFrame(data)
+#    data = {'text': [tweet_text], 'created_at': [pd.to_datetime(created_at_str)]}
+#    df = pd.DataFrame(data)
     # ... (feature creation logic is unchanged) ...
-    df['text_str'] = df['text'].astype(str)
-    df['word_count'] = df['text_str'].apply(lambda x: len(x.split()))
-    df['capital_count'] = df['text_str'].apply(lambda x: len(re.findall(r'[A-Z]', x)))
-    df['digit_count'] = df['text_str'].apply(lambda x: len(re.findall(r'[0-9]', x)))
-    df['hashtag_count'] = df['text_str'].apply(lambda x: len(re.findall(r'#', x)))
-    df['url_count'] = df['text_str'].apply(lambda x: len(re.findall(r'http[s]?://', x)))
-    df['mention_count'] = df['text_str'].apply(lambda x: len(re.findall(r'@', x)))
-    df['exclamation_count'] = df['text_str'].apply(lambda x: len(re.findall(r'!', x)))
-    df['question_count'] = df['text_str'].apply(lambda x: len(re.findall(r'\?', x)))
-    df['hour_of_day'] = df['created_at'].dt.hour
-    df['day_of_week'] = df['created_at'].dt.dayofweek
-    X_text_features = vectorizer.transform(df['text'])
-    df_numeric = df[numeric_features_list]
-    X_numeric_features = scaler.transform(df_numeric)
-    X_final = hstack([X_text_features, X_numeric_features])
-    prediction = model.predict(X_final)
-    proba = model.predict_proba(X_final)
-    result = "Human" if prediction[0] == 1 else "Bot"
-    confidence = proba[0][prediction[0]]
-    return result, confidence
+#    df['text_str'] = df['text'].astype(str)
+#    df['word_count'] = df['text_str'].apply(lambda x: len(x.split()))
+#    df['capital_count'] = df['text_str'].apply(lambda x: len(re.findall(r'[A-Z]', x)))
+#   df['digit_count'] = df['text_str'].apply(lambda x: len(re.findall(r'[0-9]', x)))
+#    df['hashtag_count'] = df['text_str'].apply(lambda x: len(re.findall(r'#', x)))
+#   df['url_count'] = df['text_str'].apply(lambda x: len(re.findall(r'http[s]?://', x)))
+#   df['mention_count'] = df['text_str'].apply(lambda x: len(re.findall(r'@', x)))
+#   df['exclamation_count'] = df['text_str'].apply(lambda x: len(re.findall(r'!', x)))
+#    df['question_count'] = df['text_str'].apply(lambda x: len(re.findall(r'\?', x)))
+#   df['hour_of_day'] = df['created_at'].dt.hour
+#   df['day_of_week'] = df['created_at'].dt.dayofweek
+#   X_text_features = vectorizer.transform(df['text'])
+#   df_numeric = df[numeric_features_list]
+#   X_numeric_features = scaler.transform(df_numeric)
+#   X_final = hstack([X_text_features, X_numeric_features])
+#   prediction = model.predict(X_final)
+#   proba = model.predict_proba(X_final)
+#   result = "Human" if prediction[0] == 1 else "Bot"
+#   confidence = proba[0][prediction[0]]
+#   return result, confidence
 
 
 flash_model = genai.GenerativeModel("models/gemini-2.5-flash")
@@ -213,15 +213,15 @@ def send_email(recipient_email, subject, body):
 def home():
     return {"message": "Flask API running successfully"}
 # --- Predict (AI Bot Detection) ---
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.get_json()
-    tweet_text = data.get('text', '')
-    if not tweet_text.strip():
-        return jsonify({'error': 'Text cannot be empty'}), 400
-    now = datetime.now().isoformat()
-    result, confidence = make_prediction(tweet_text, now)
-    return jsonify({'prediction': result, 'confidence': float(confidence)})
+#@app.route('/predict', methods=['POST'])
+#def predict():
+#   data = request.get_json()
+#   tweet_text = data.get('text', '')
+#   if not tweet_text.strip():
+#       return jsonify({'error': 'Text cannot be empty'}), 400
+#   now = datetime.now().isoformat()
+#   result, confidence = make_prediction(tweet_text, now)
+#   return jsonify({'prediction': result, 'confidence': float(confidence)})
 
 # --- Register with reCAPTCHA ---
 @app.route('/register', methods=['POST'])
@@ -352,14 +352,14 @@ def verify_otp():
     cursor = conn.cursor()
     cursor.execute('SELECT reset_token, reset_token_expiry FROM users WHERE email = %s', (email,))
     user = cursor.fetchone()
-    if not user or not user['reset_token']:
+    if not user or not user[0]:
         conn.close()
         return jsonify({'status': 'error', 'message': 'Invalid request or OTP already used.'}), 400
-    expiry_time = datetime.fromisoformat(user['reset_token_expiry'])
+    expiry_time = datetime.fromisoformat(user[1])
     if datetime.now() > expiry_time:
         conn.close()
         return jsonify({'status': 'error', 'message': 'OTP has expired.'}), 410
-    if check_password_hash(user['reset_token'], otp):
+    if check_password_hash(user[0], otp):
         conn.close()
         return jsonify({'status': 'success', 'message': 'OTP verified successfully.'}), 200
     else:
@@ -377,7 +377,8 @@ def reset_password():
     new_password_hash = generate_password_hash(new_password)
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE users SET password_hash = %s, reset_token = NULL, reset_token_expiry = NULL WHERE email = %s', ...)
+    cursor.execute('UPDATE users SET password_hash = %s, reset_token = NULL, reset_token_expiry = NULL WHERE email = %s', 
+               (new_password_hash, email))
     conn.commit()
     conn.close()
     return jsonify({'status': 'success', 'message': 'Password has been reset successfully.'}), 200
