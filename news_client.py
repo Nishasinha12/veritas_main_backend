@@ -1,13 +1,14 @@
 import requests
 import os
+import urllib.parse  # ✅ add this
 
 API_KEY = os.getenv("NEWS_API_KEY")
 
 def query_news(claim):
-    url = f"https://newsapi.org/v2/everything?q={claim}&language=en&sortBy=publishedAt&apiKey={API_KEY}"
+    query_encoded = urllib.parse.quote(claim)  # ✅ encode spaces
+    url = f"https://newsapi.org/v2/everything?q={query_encoded}&language=en&sortBy=publishedAt&apiKey={API_KEY}"
     response = requests.get(url)
     data = response.json()
-
     articles = []
     for article in data.get("articles", []):
         articles.append({
