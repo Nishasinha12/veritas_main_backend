@@ -1,0 +1,6 @@
+flask
+requests
+python-dotenv
+nltk
+transformers        # optional: for advanced NLP
+sentence-transformers  # optional: for semantic similarity

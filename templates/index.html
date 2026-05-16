@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Detector</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border-radius: 5px; }
+        .human { background-color: #d4edda; color: #155724; }
+        .bot { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+    <h1>Bot Detection System</h1>
+    <p>Enter a post to check if it's from a human or a bot.</p>
+
+    <form id="detectionForm">
+        <textarea id="postText" placeholder="Write your post here..."></textarea>
+        <button type="submit">Check Post</button>
+    </form>
+
+    <div id="result"></div>
+    <div id="captcha-container" style="display:none; margin-top: 20px;">
+        <p><strong>Verification Required.</strong> Please solve the puzzle to continue.</p>
+    </div>
+
+    <script>
+        document.getElementById('detectionForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Stop the form from reloading the page
+
+            const postText = document.getElementById('postText').value;
+            const resultDiv = document.getElementById('result');
+            const captchaDiv = document.getElementById('captcha-container');
+            
+            resultDiv.innerHTML = 'Analyzing...';
+            captchaDiv.style.display = 'none';
+
+            // Send the text to our Flask backend API
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: postText })
+            });
+
+            const data = await response.json();
+
+            // Display the result from the ML model
+            const confidencePercent = (data.confidence * 100).toFixed(0);
+            resultDiv.innerHTML = `Prediction: <strong>${data.prediction}</strong> (Confidence: ${confidencePercent}%)`;
+            resultDiv.className = data.prediction.toLowerCase();
+
+            // --- The Workflow Logic ---
+            // If the model predicts "Bot", we would show the CAPTCHA
+            if (data.prediction === 'Bot') {
+                captchaDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

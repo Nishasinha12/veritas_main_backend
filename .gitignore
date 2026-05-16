@@ -1,0 +1,17 @@
+.venv/
+venv/
+image_env/
+audio_env/
+models/
+tf_env/
+__pycache__/
+*.pyc
+.env
+# Add to .gitignore
+*.zip
+*.db
+test.mp3
+test_audio.py
+tf_env.zip
+image_env.zip
+venv.zip
