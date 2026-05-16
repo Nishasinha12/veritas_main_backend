@@ -506,31 +506,27 @@ def detect_image():
             return jsonify({"error": "No image file provided"}), 400
 
         image_file = request.files[file_key]
-        img = PILImage.open(image_file.stream).convert("RGB")
-        img = img.resize((256, 256))
-        image_array = np.array(img, dtype=np.float32) / 255.0
 
+        # ✅ Forward file directly — not as JSON array
         response = requests.post(
             f"{IMAGE_SERVICE_URL}/predict/image",
-            json={"input": image_array.tolist()}
+            files={"image": (image_file.filename, image_file.stream, image_file.mimetype)},
+            timeout=60
         )
         response.raise_for_status()
         result = response.json()
-        print(f"🔍 TF service response keys: {list(result.keys())}")
-        print(f"🔍 heatmap present: {'heatmap_base64' in result}")
-        print(f"🔍 heatmap length: {len(result.get('heatmap_base64', ''))}")
 
         response_data = {
             "prediction": result.get("prediction", "Unknown"),
             "confidence": result.get("confidence", None)
         }
-
-        # Forward Grad-CAM heatmap if the TF service produced one
         if "heatmap_base64" in result:
             response_data["heatmap_base64"] = result["heatmap_base64"]
 
         return jsonify(response_data)
-    
+
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Image service is waking up, please try again"}), 503
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": "Internal server error during image detection."}), 500
