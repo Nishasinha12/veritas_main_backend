@@ -498,35 +498,76 @@ def news_check():
 from PIL import Image as PILImage
 import traceback
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DROP-IN REPLACEMENT for the detect_image() function in app1.py
+#
+# BUG FIXED: Flask file streams are single-read cursors.
+# The original code passed image_file.stream directly to requests.post().
+# If PIL or anything else had already touched the stream (or if Flask
+# had already buffered it), the forwarded stream would be empty — the
+# image microservice would receive a 0-byte file and fail silently.
+#
+# FIX: Read the raw bytes immediately with .read(), then wrap in BytesIO
+# for the forwarding call. This guarantees the full file is sent regardless
+# of how Flask has internally handled the stream.
+# ─────────────────────────────────────────────────────────────────────────────
+
+from io import BytesIO   # add this import at the top of app1.py if not present
+
 @app.route("/api/v1/detect/image", methods=["POST"])
 def detect_image():
     try:
-        file_key = "image" if "image" in request.files else "file" if "file" in request.files else None
+        file_key = (
+            "image" if "image" in request.files else
+            "file"  if "file"  in request.files else
+            None
+        )
         if not file_key:
-            return jsonify({"error": "No image file provided"}), 400
+            return jsonify({"error": "No image file provided. Use key 'image' or 'file'."}), 400
 
         image_file = request.files[file_key]
 
-        # ✅ Forward file directly — not as JSON array
+        # ✅ FIX: read bytes immediately — stream is a single-read cursor.
+        # Passing image_file.stream directly risks forwarding an empty body
+        # if Flask has already advanced the stream pointer internally.
+        img_bytes = image_file.read()
+        if not img_bytes:
+            return jsonify({"error": "Uploaded file is empty."}), 400
+
+        # Forward raw bytes wrapped in BytesIO to the image microservice
         response = requests.post(
             f"{IMAGE_SERVICE_URL}/predict/image",
-            files={"image": (image_file.filename, image_file.stream, image_file.mimetype)},
-            timeout=60
+            files={
+                "image": (
+                    image_file.filename,
+                    BytesIO(img_bytes),          # ← fresh readable BytesIO
+                    image_file.mimetype or "image/jpeg"
+                )
+            },
+            timeout=90   # Railway cold-start + model download can take 60–90 s
         )
         response.raise_for_status()
         result = response.json()
 
         response_data = {
             "prediction": result.get("prediction", "Unknown"),
-            "confidence": result.get("confidence", None)
+            "confidence": result.get("confidence", None),
         }
         if "heatmap_base64" in result:
             response_data["heatmap_base64"] = result["heatmap_base64"]
+        if "heatmap_note" in result:
+            response_data["heatmap_note"] = result["heatmap_note"]
 
         return jsonify(response_data)
 
     except requests.exceptions.Timeout:
-        return jsonify({"error": "Image service is waking up, please try again"}), 503
+        return jsonify({
+            "error": "Image service timed out — it may be cold-starting. Please retry in 30 s."
+        }), 503
+    except requests.exceptions.ConnectionError:
+        return jsonify({
+            "error": f"Cannot reach image service at {IMAGE_SERVICE_URL}. Check IMAGE_SERVICE_URL env var."
+        }), 503
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": "Internal server error during image detection."}), 500
